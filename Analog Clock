@@ -1,0 +1,105 @@
+#include <GL/glut.h>
+#include <cmath>
+#include <ctime>
+
+const GLfloat RADIUS = 50.0f;
+
+int hour, minute, second;
+
+void drawCircle(GLfloat x, GLfloat y, GLfloat radius, bool filled = false) {
+    glBegin(filled ? GL_TRIANGLE_FAN : GL_LINE_LOOP);
+    for (int i = 0; i <= 360; i++) {
+        float angle = i * M_PI / 180.0f;
+        glVertex2f(x + sin(angle) * radius, y + cos(angle) * radius);
+    }
+    glEnd();
+}
+
+void drawNumbers() {
+    void* font = GLUT_BITMAP_HELVETICA_18;
+    glColor3f(0.1f, 0.1f, 0.1f);
+    const char* numbers[] = {"12", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"};
+    for (int i = 0; i < 12; ++i) {
+        float angle = (i * 30) * M_PI / 180.0f;
+        float x = sin(angle) * (RADIUS - 8);
+        float y = cos(angle) * (RADIUS - 8);
+        glRasterPos2f(x - 2, y - 2);
+        for (const char* c = numbers[i]; *c; c++) {
+            glutBitmapCharacter(font, *c);
+        }
+    }
+}
+
+
+
+void drawHand(float angleDeg, float length, float width, float r, float g, float b) {
+    glPushMatrix();
+    glRotatef(-angleDeg, 0.0f, 0.0f, 1.0f);
+    glColor3f(r, g, b);
+    glLineWidth(width);
+    glBegin(GL_LINES);
+    glVertex2f(0, 0);
+    glVertex2f(0, length);
+    glEnd();
+    glPopMatrix();
+}
+
+
+void display() {
+    glClear(GL_COLOR_BUFFER_BIT);
+    glLoadIdentity();
+
+    glColor3f(1.0f, 1.0f, 0.5f);
+    drawCircle(0, 0, RADIUS, true);
+
+    glColor3f(0.0f, 0.0f, 0.0f);
+    drawCircle(0, 0, RADIUS, false);
+    drawNumbers();
+
+    drawHand(second * 6.0f, RADIUS * 0.85f, 1.0f, 1, 0, 0);
+    drawHand(minute * 6.0f, RADIUS * 0.65f, 3.0f, 0, 1, 0);
+    drawHand((hour % 12 + minute / 60.0f) * 30.0f, RADIUS * 0.5f, 5.0f, 0, 0, 1);
+
+    glFlush();
+}
+
+
+void updateTime(int) {
+    time_t now = time(0);
+    tm* local = localtime(&now);
+    hour = local->tm_hour;
+    minute = local->tm_min;
+    second = local->tm_sec;
+    glutPostRedisplay();
+    glutTimerFunc(1000, updateTime, 0);
+}
+
+
+void reshape(int w, int h) {
+    glViewport(0, 0, w, h);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    if (w <= h)
+        gluOrtho2D(-RADIUS, RADIUS, -RADIUS * h / w, RADIUS * h / w);
+    else
+        gluOrtho2D(-RADIUS * w / h, RADIUS * w / h, -RADIUS, RADIUS);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+
+
+int main(int argc, char** argv) {
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+    glutInitWindowSize(500, 500);
+    glutCreateWindow("Analog Clock - OpenGL GLUT");
+
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // white background
+
+    glutDisplayFunc(display);
+    glutReshapeFunc(reshape);
+    glutTimerFunc(0, updateTime, 0);
+
+    glutMainLoop();
+    return 0;
+}
